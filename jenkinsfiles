@@ -45,3 +45,70 @@ pipeline{
         }
     }
 }
+
+
+
+
+######################################EKS_Methods###########################################################################################
+
+
+
+pipeline{
+    agent any
+    environment{
+        scannerHome = tool "mysonar"
+    }
+    stages{
+        stage ("cleanWS"){
+            steps{
+                cleanWs()
+            }
+        }
+        stage("code") {
+            steps{
+                git branch: 'main', url: 'https://github.com/Shaikbasha1301/3-Tier-Full-Stack-Camp.git'
+            }
+        }
+        stage ("CQA"){
+            steps{
+                withSonarQubeEnv("mysonar") {
+                    sh "${scannerHome}/bin/sonar-scanner -Dsonar.projectName=camprb  -Dsonar.projectKey=camprb"
+                }
+            }
+        }
+        stage("quality gates"){
+            steps{
+                script{
+                    waitForQualityGate abortPipeline: false, credentialsId: 'mysonar'
+                }
+            }
+        }
+        stage ("build"){
+            steps{
+            sh "docker build -t basha10/newcamp:v1 ."
+        }
+        }
+        stage ("trivy"){
+            steps{
+                sh "trivy image basha10/newcamp:v1"
+            }
+        }
+        stage("push"){
+            steps{
+                script{
+                    // This step should not normally be used in your script. Consult the inline help for details.
+                    withDockerRegistry(credentialsId: 'docker') {
+                       sh "docker push basha10/newcamp:v1"
+                }
+            }
+        }
+    }
+        stage("deploy"){
+            steps{
+                withKubeCredentials(kubectlCredentials: [[caCertificate: '', clusterName: 'EKS_CLOUD', contextName: '', credentialsId: 'K8', namespace: 'webapps', serverUrl: 'https://55B520A3F9D6488A19C6A989B4E97C68.gr7.us-east-1.eks.amazonaws.com']]) {
+                  sh "kubectl apply -f Manifests/"
+}
+            }
+        }
+    }
+}
