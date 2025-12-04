@@ -1,0 +1,15 @@
+.kube/
+.ssh/
+.terraform.d/
+.cache/
+.config/
+.helm/
+*.pem
+*.key
+*.crt
+*.secret
+*.tfstate
+*.tfstate.backup
+.wget-hsts
+.viminfo
+.bash_history
